@@ -1,0 +1,10 @@
+{
+  // For making @types/surfingkeys.d.ts
+  "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "allowJs": true,
+    "include": ["Surfingkeys/src/content_scripts/common/**/*"],
+    "outDir": "@types/Surfingkeys",
+  }
+}

@@ -1,6 +1,11 @@
 {
-  "name": "surfingkeys.js",
-  "private": true,
+  "name": "Surfingkeys.js",
+  "description": "My Surfingkeys settings with TypeScript types",
+  "private": false,
+  "scripts": {
+    "// By `|| true` to ignore the parts that can't be helped for now": "",
+    "update-surfingkeys-types": "tsc --project tsconfig-surfingkeys.json || true",
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
