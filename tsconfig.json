@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "lib": ["dom", "ES2023"],
+    "allowJs": true,
+    "strict": true,
+    "experimentalDecorators": true,
+    "noUncheckedIndexedAccess": true,
+    "typeRoots": [
+      "./@types",
+    ]
+  }
+}
