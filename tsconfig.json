@@ -7,7 +7,7 @@
     "experimentalDecorators": true,
     "noUncheckedIndexedAccess": true,
     "typeRoots": [
-      "./@types",
+      "@types",
     ]
   }
 }

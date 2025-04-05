@@ -4,7 +4,8 @@
     "declaration": true,
     "emitDeclarationOnly": true,
     "allowJs": true,
-    "include": ["Surfingkeys/src/content_scripts/common/**/*"],
-    "outDir": "@types/Surfingkeys",
+    "include": ["Surfingkeys/src/content_scripts/common/*.js"], // Doen't work correctly. `tsc --project tsconfig-surfingkeys.json` generates all .d.ts of `./*`
+    "exclude": ["node_modules", "Surfingkeys.js"],
+    "outDir": "@types",
   }
 }
