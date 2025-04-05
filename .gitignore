@@ -9,3 +9,7 @@ node_modules
 # cache
 .eslintcache
 .stylelintcache
+
+# Avoid LICENSE problem, don't include generated .d.ts files
+/@types/Surfingkeys/
+!/@types/Surfingkeys/.gitkeep

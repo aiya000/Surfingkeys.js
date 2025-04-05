@@ -4,7 +4,8 @@
   "private": false,
   "scripts": {
     "// By `|| true` to ignore the parts that can't be helped for now": "",
-    "update-surfingkeys-types": "tsc --project tsconfig-surfingkeys.json || true",
+    "build-surfingkeys-types": "tsc --project tsconfig-surfingkeys.json || true",
+    "clean": "rm -rf @types/Surfingkeys/*",
   },
   "devDependencies": {
     "@types/bun": "latest"
