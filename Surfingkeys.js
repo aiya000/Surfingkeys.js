@@ -37,7 +37,7 @@ const {
 const safeRun = (f, handle) => {
   return () => {
     /** @param e {unknown} */
-    const defaultHandle = (e) => alert(`Error: ${JSON.stringify(e)}`)
+    const defaultHandle = (e) => alert(`Error: ${e}`)
     try {
       return f()
     } catch (e) {
@@ -47,9 +47,16 @@ const safeRun = (f, handle) => {
 }
 
 /**
+ * @param message {string}
+ * @returns {never}
+ */
+const raiseError = (message) => {
+  throw new Error(message)
+}
+
+/**
  * General
  */
-
 try {
   Hints.characters = 'wertuiopasdfghjkzxcvbm'
   settings.hintAlign = 'left'
@@ -60,23 +67,31 @@ try {
 /**
  * Normal mode
  */
-
 try {
-  /**
-   * Noremaps
-   */
-  map('<Ctrl-b>', 'u')
-  map('<Ctrl-f>', 'd')
+  mapkey('<Ctrl-1>', '', safeRun(() => RUNTIME('focusTabByIndex', { index: 1 }, (res) => alert(res))))
+  mapkey('<Ctrl-2>', '', safeRun(() => RUNTIME('focusTabByIndex', { index: 2 }, (res) => alert(res))))
+  mapkey('<Ctrl-3>', '', safeRun(() => RUNTIME('focusTabByIndex', { index: 3 })))
+  mapkey('<Ctrl-4>', '', safeRun(() => RUNTIME('focusTabByIndex', { index: 4 })))
+  mapkey('<Ctrl-5>', '', safeRun(() => RUNTIME('focusTabByIndex', { index: 5 })))
+  mapkey('<Ctrl-6>', '', safeRun(() => RUNTIME('focusTabByIndex', { index: 6 })))
+  mapkey('<Ctrl-7>', '', safeRun(() => RUNTIME('focusTabByIndex', { index: 7 })))
+  mapkey('<Ctrl-8>', '', safeRun(() => RUNTIME('focusTabByIndex', { index: 8 })))
+  mapkey('<Ctrl-9>', '', safeRun(() => RUNTIME('focusTabByIndex', { index: 9 })))
+  mapkey('<Ctrl-0>', '', safeRun(() => RUNTIME('focusTabByIndex', { index: 10 })))
+
   map('F', 'af')
   map('d', 'x')
+  map('<Ctrl-w>', 'x') // Browser's default shortcut
 
   mapkey(
     'gh',
     'open link google',
     safeRun(() => openLink('https://google.co.jp'))
   )
-  mapkey('gH', 'tab open link google', () =>
-    tabOpenLink('https://google.co.jp')
+  mapkey(
+    'gH',
+    'tab open link google',
+    safeRun(() => tabOpenLink('https://google.co.jp'))
   )
   mapkey(
     'u',
@@ -131,9 +146,9 @@ try {
     'move tab +1',
     safeRun(() => RUNTIME('moveTab', { step: 1 }))
   )
-  mapkey('Q', 'Open SurfingKeys settings', () =>
+  mapkey('Q', 'Open SurfingKeys settings', safeRun(() =>
     tabOpenLink('/pages/options.html')
-  )
+  ))
   mapkey(
     'R',
     'Reload with nocache',
@@ -156,11 +171,28 @@ try {
 /**
  * Insert mode
  */
-
 try {
+  /**
+   * @param direction {string}
+   * @param granularity {string}
+   * @returns {void}
+   */
+  const moveCursor = (direction, granularity) =>
+    document.getSelection()
+      ?.modify('move', direction, granularity)
+      ?? raiseError('No selection found')
+
+  const editInEditor = () => {
+    const element = getRealEdit()
+    element.blur()
+    Insert.exit()
+    Front.showEditor(element)
+  }
+
   imap('<Ctrl-[>', '<Esc>')
   imap('<Ctrl-l>', '<Esc>')
   imap('<Ctrl-a>', '<Home>')
+  imap('<Ctrl-e>', '<End>')
   imapkey(
     '<Ctrl-b>',
     'Move cursor left',
@@ -188,17 +220,6 @@ try {
   imap('<Ctrl-h>', '<Backspace>') // TODO: Didn't work
 } catch (e) {
   alert(`In the section 'Insert mode': ${e}`)
-}
-
-function moveCursor(direction, granularity) {
-  document.getSelection().modify('move', direction, granularity)
-}
-
-function editInEditor() {
-  const element = getRealEdit()
-  element.blur()
-  Insert.exit()
-  Front.showEditor(element)
 }
 
 function deleteLeftWord() {
