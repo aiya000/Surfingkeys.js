@@ -5,10 +5,11 @@
   "scripts": {
     "// By `|| true` to ignore the parts that can't be helped for now": "",
     "build-surfingkeys-types": "tsc --project tsconfig-surfingkeys.json || true",
-    "clean": "rm -rf @types/*",
+    "clean": "rm -rf @types/*"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "prettier": "^3.5.3"
   },
   "peerDependencies": {
     "typescript": "^5"
