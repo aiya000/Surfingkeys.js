@@ -68,16 +68,56 @@ try {
  * Normal mode
  */
 try {
-  mapkey('<Ctrl-1>', '', safeRun(() => RUNTIME('focusTabByIndex', { index: 1 }, (res) => alert(res))))
-  mapkey('<Ctrl-2>', '', safeRun(() => RUNTIME('focusTabByIndex', { index: 2 }, (res) => alert(res))))
-  mapkey('<Ctrl-3>', '', safeRun(() => RUNTIME('focusTabByIndex', { index: 3 })))
-  mapkey('<Ctrl-4>', '', safeRun(() => RUNTIME('focusTabByIndex', { index: 4 })))
-  mapkey('<Ctrl-5>', '', safeRun(() => RUNTIME('focusTabByIndex', { index: 5 })))
-  mapkey('<Ctrl-6>', '', safeRun(() => RUNTIME('focusTabByIndex', { index: 6 })))
-  mapkey('<Ctrl-7>', '', safeRun(() => RUNTIME('focusTabByIndex', { index: 7 })))
-  mapkey('<Ctrl-8>', '', safeRun(() => RUNTIME('focusTabByIndex', { index: 8 })))
-  mapkey('<Ctrl-9>', '', safeRun(() => RUNTIME('focusTabByIndex', { index: 9 })))
-  mapkey('<Ctrl-0>', '', safeRun(() => RUNTIME('focusTabByIndex', { index: 10 })))
+  mapkey(
+    '<Ctrl-1>',
+    '',
+    safeRun(() => RUNTIME('focusTabByIndex', { index: 1 }, (res) => alert(res)))
+  )
+  mapkey(
+    '<Ctrl-2>',
+    '',
+    safeRun(() => RUNTIME('focusTabByIndex', { index: 2 }, (res) => alert(res)))
+  )
+  mapkey(
+    '<Ctrl-3>',
+    '',
+    safeRun(() => RUNTIME('focusTabByIndex', { index: 3 }))
+  )
+  mapkey(
+    '<Ctrl-4>',
+    '',
+    safeRun(() => RUNTIME('focusTabByIndex', { index: 4 }))
+  )
+  mapkey(
+    '<Ctrl-5>',
+    '',
+    safeRun(() => RUNTIME('focusTabByIndex', { index: 5 }))
+  )
+  mapkey(
+    '<Ctrl-6>',
+    '',
+    safeRun(() => RUNTIME('focusTabByIndex', { index: 6 }))
+  )
+  mapkey(
+    '<Ctrl-7>',
+    '',
+    safeRun(() => RUNTIME('focusTabByIndex', { index: 7 }))
+  )
+  mapkey(
+    '<Ctrl-8>',
+    '',
+    safeRun(() => RUNTIME('focusTabByIndex', { index: 8 }))
+  )
+  mapkey(
+    '<Ctrl-9>',
+    '',
+    safeRun(() => RUNTIME('focusTabByIndex', { index: 9 }))
+  )
+  mapkey(
+    '<Ctrl-0>',
+    '',
+    safeRun(() => RUNTIME('focusTabByIndex', { index: 10 }))
+  )
 
   map('F', 'af')
   map('d', 'x')
@@ -146,9 +186,11 @@ try {
     'move tab +1',
     safeRun(() => RUNTIME('moveTab', { step: 1 }))
   )
-  mapkey('Q', 'Open SurfingKeys settings', safeRun(() =>
-    tabOpenLink('/pages/options.html')
-  ))
+  mapkey(
+    'Q',
+    'Open SurfingKeys settings',
+    safeRun(() => tabOpenLink('/pages/options.html'))
+  )
   mapkey(
     'R',
     'Reload with nocache',
@@ -172,15 +214,34 @@ try {
  * Insert mode
  */
 try {
+  // Copied from ./Surfingkeys/src/content_scripts/common/insert.js
+  function getRealEdit(event) {
+    var rt = event ? event.target : document.activeElement
+    // on some pages like chrome://history/, input is in shadowRoot of several other recursive shadowRoots.
+    while (rt && rt.shadowRoot) {
+      if (rt.shadowRoot.activeElement) {
+        rt = rt.shadowRoot.activeElement
+      } else if (rt.shadowRoot.querySelector('input, textarea, select')) {
+        rt = rt.shadowRoot.querySelector('input, textarea, select')
+        break
+      } else {
+        break
+      }
+    }
+    if (rt === window) {
+      rt = document.body
+    }
+    return rt
+  }
+
   /**
    * @param direction {string}
    * @param granularity {string}
    * @returns {void}
    */
   const moveCursor = (direction, granularity) =>
-    document.getSelection()
-      ?.modify('move', direction, granularity)
-      ?? raiseError('No selection found')
+    document.getSelection()?.modify('move', direction, granularity) ??
+    raiseError('No selection found')
 
   const editInEditor = () => {
     const element = getRealEdit()
@@ -196,7 +257,13 @@ try {
   imapkey(
     '<Ctrl-b>',
     'Move cursor left',
-    safeRun(() => moveCursor('left', 'character'))
+    safeRun(() => {
+      const activeElement = document.activeElement
+      if (activeElement.selectionStart < activeElement.value.length) {
+        activeElement.selectionStart += 1
+        activeElement.selectionEnd = activeElement.selectionStart
+      }
+    })
   )
   imapkey(
     '<Ctrl-f>',
@@ -206,12 +273,21 @@ try {
   imapkey(
     '<Ctrl-p>',
     'Move cursor up',
-    safeRun(() => moveCursor('left', 'line'))
+    safeRun(() => {
+      console.log('poi:', getRealEdit)
+    })
   )
   imapkey(
     '<Ctrl-n>',
     'Move cursor down',
-    safeRun(() => moveCursor('right', 'line'))
+    safeRun(() =>
+      document.activeElement.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'ArrowUp',
+          code: 'ArrowUp',
+        })
+      )
+    )
   )
   imapkey('<Ctrl-g>', 'Edit in the editor', safeRun(editInEditor))
   iunmap('<Ctrl-i>')
