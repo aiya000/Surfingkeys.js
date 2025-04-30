@@ -7,14 +7,14 @@
 
 const {
   aceVimMap,
-  mapkey: mapKey_,
+  mapkey: mapkey_,
   imap,
   iunmap,
-  imapkey: imapKey_,
+  imapkey: imapkey_,
   getClickableElements,
   vmap,
-  vmapkey: vmapKey_,
-  map,
+  vmapkey: vmapkey_,
+  map: nmap,
   unmap,
   cmap,
   addSearchAlias,
@@ -31,13 +31,13 @@ const {
 
 /**
  * Expose API for using in the browser console
- * @type {typeof api}
  */
 window.surfingkeys = api
 
 /**
- * @param f {() => void}
- * @param [handle] {(e: unknown) => void}
+ * @template T
+ * @param f {(...args: unknown[]) => T}
+ * @param [handle] {(e: unknown) => T}
  * @returns {() => void}
  */
 const safeRun = (f, handle) => () => {
@@ -50,7 +50,24 @@ const safeRun = (f, handle) => () => {
   }
 }
 
-const mapKey = () => 
+/**
+ * @template [T=unknown]
+ * @typedef {(keys: string, jscode: (...args: unknown[]) => T, options?: object, annotation?: string) => void} MappingKey
+ *
+ * Arguments order arranged version of `typeof mapkey_`.
+ */
+
+/** @type {MappingKey} */
+const nmapkey = (keys, jscode, options, annotation) =>
+  mapkey_(keys, annotation ?? '', safeRun(jscode), options)
+
+/** @type {MappingKey} */
+const imapkey = (keys, jscode, options, annotation) =>
+  imapkey_(keys, annotation ?? '', safeRun(jscode), options)
+
+/** @type {MappingKey} */
+const vmapkey = (keys, jscode, options, annotation) =>
+  vmapkey_(keys, annotation ?? '', safeRun(jscode), options)
 
 /**
  * @param message {string}
@@ -74,144 +91,49 @@ try {
  * Normal mode
  */
 try {
-  mapkey(
-    '<Ctrl-1>',
-    '',
-    safeRun(() => RUNTIME('focusTabByIndex', { index: 1 }, (res) => alert(res)))
+  nmapkey('<Ctrl-1>', () =>
+    RUNTIME('focusTabByIndex', { index: 1 }, alert)
   )
-  mapkey(
-    '<Ctrl-2>',
-    '',
-    safeRun(() => RUNTIME('focusTabByIndex', { index: 2 }, (res) => alert(res)))
+  nmapkey('<Ctrl-2>', () =>
+    RUNTIME('focusTabByIndex', { index: 2 }, alert)
   )
-  mapkey(
-    '<Ctrl-3>',
-    '',
-    safeRun(() => RUNTIME('focusTabByIndex', { index: 3 }))
-  )
-  mapkey(
-    '<Ctrl-4>',
-    '',
-    safeRun(() => RUNTIME('focusTabByIndex', { index: 4 }))
-  )
-  mapkey(
-    '<Ctrl-5>',
-    '',
-    safeRun(() => RUNTIME('focusTabByIndex', { index: 5 }))
-  )
-  mapkey(
-    '<Ctrl-6>',
-    '',
-    safeRun(() => RUNTIME('focusTabByIndex', { index: 6 }))
-  )
-  mapkey(
-    '<Ctrl-7>',
-    '',
-    safeRun(() => RUNTIME('focusTabByIndex', { index: 7 }))
-  )
-  mapkey(
-    '<Ctrl-8>',
-    '',
-    safeRun(() => RUNTIME('focusTabByIndex', { index: 8 }))
-  )
-  mapkey(
-    '<Ctrl-9>',
-    '',
-    safeRun(() => RUNTIME('focusTabByIndex', { index: 9 }))
-  )
-  mapkey(
-    '<Ctrl-0>',
-    '',
-    safeRun(() => RUNTIME('focusTabByIndex', { index: 10 }))
-  )
+  nmapkey('<Ctrl-3>', () => RUNTIME('focusTabByIndex', { index: 3 }))
+  nmapkey('<Ctrl-4>', () => RUNTIME('focusTabByIndex', { index: 4 }))
+  nmapkey('<Ctrl-5>', () => RUNTIME('focusTabByIndex', { index: 5 }))
+  nmapkey('<Ctrl-6>', () => RUNTIME('focusTabByIndex', { index: 6 }))
+  nmapkey('<Ctrl-7>', () => RUNTIME('focusTabByIndex', { index: 7 }))
+  nmapkey('<Ctrl-8>', () => RUNTIME('focusTabByIndex', { index: 8 }))
+  nmapkey('<Ctrl-9>', () => RUNTIME('focusTabByIndex', { index: 9 }))
+  nmapkey('<Ctrl-0>', () => RUNTIME('focusTabByIndex', { index: 10 }))
 
-  map('F', 'af')
-  map('d', 'x')
-  map('<Ctrl-w>', 'x') // Browser's default shortcut
+  nmap('F', 'af')
+  nmap('d', 'x')
 
-  mapkey(
-    'gh',
-    'open link google',
-    safeRun(() => openLink('https://google.co.jp'))
+  nmapkey('gh', () => openLink('https://google.co.jp'))
+  nmapkey('gH', () => tabOpenLink('https://google.co.jp'))
+  nmapkey('u', () => RUNTIME('openLast'))
+  nmapkey('H', () => history.go(-1), { repeatIgnore: true })
+  nmapkey('L', () => history.go(1), { repeatIgnore: true })
+  nmapkey('o', () =>
+    Front.openOmnibar({
+      type: 'URLs',
+      extra: 'getAllSites',
+      tabbed: false,
+    })
   )
-  mapkey(
-    'gH',
-    'tab open link google',
-    safeRun(() => tabOpenLink('https://google.co.jp'))
+  nmapkey('b', () =>
+    Front.openOmnibar({
+      type: 'URLs',
+      extra: 'getAllSites',
+      tabbed: true,
+    })
   )
-  mapkey(
-    'u',
-    '#3Restore closed tab',
-    safeRun(() => RUNTIME('openLast'))
-  )
-  mapkey(
-    'H',
-    '#4Go back in history',
-    safeRun(() => history.go(-1)),
-    {
-      repeatIgnore: true,
-    }
-  )
-  mapkey(
-    'L',
-    '#4Go forward in history',
-    safeRun(() => history.go(1)),
-    {
-      repeatIgnore: true,
-    }
-  )
-  mapkey(
-    'o',
-    '#8Open a URL in current tab',
-    safeRun(() =>
-      Front.openOmnibar({
-        type: 'URLs',
-        extra: 'getAllSites',
-        tabbed: false,
-      })
-    )
-  )
-  mapkey(
-    'b',
-    'Select tabs',
-    safeRun(() =>
-      Front.openOmnibar({
-        type: 'URLs',
-        extra: 'getAllSites',
-        tabbed: true,
-      })
-    )
-  )
-  mapkey(
-    '<',
-    'move tab -1',
-    safeRun(() => RUNTIME('moveTab', { step: -1 }))
-  )
-  mapkey(
-    '>',
-    'move tab +1',
-    safeRun(() => RUNTIME('moveTab', { step: 1 }))
-  )
-  mapkey(
-    'Q',
-    'Open SurfingKeys settings',
-    safeRun(() => tabOpenLink('/pages/options.html'))
-  )
-  mapkey(
-    'R',
-    'Reload with nocache',
-    safeRun(() => RUNTIME('reloadTab', { nocache: true }))
-  )
-  mapkey(
-    '<Ctrl-p>',
-    'previousTab',
-    safeRun(() => RUNTIME('previousTab'))
-  )
-  mapkey(
-    '<Ctrl-n>',
-    'nextTab',
-    safeRun(() => RUNTIME('nextTab'))
-  )
+  nmapkey('<', () => RUNTIME('moveTab', { step: -1 }))
+  nmapkey('>', () => RUNTIME('moveTab', { step: 1 }))
+  nmapkey('Q', () => tabOpenLink('/pages/options.html')) // Open SurfingKeys setting page
+  nmapkey('R', () => RUNTIME('reloadTab', { nocache: true }))
+  nmapkey('<Ctrl-p>', () => RUNTIME('previousTab'))
+  nmapkey('<Ctrl-n>', () => RUNTIME('nextTab'))
 } catch (e) {
   alert(`In the section 'Normal mode': ${e}`)
 }
@@ -220,11 +142,14 @@ try {
  * Insert mode
  */
 try {
-  // Copied from ./Surfingkeys/src/content_scripts/common/insert.js
-  function getRealEdit(event) {
-    var rt = event ? event.target : document.activeElement
+  /**
+   * Copied from `./Surfingkeys/src/content_scripts/common/insert.js`.
+   * @param [event] {Event}
+   */
+  const getRealEdit = (event) => {
+    let rt = event ? event.target : document.activeElement
     // on some pages like chrome://history/, input is in shadowRoot of several other recursive shadowRoots.
-    while (rt && rt.shadowRoot) {
+    while (rt?.shadowRoot) {
       if (rt.shadowRoot.activeElement) {
         rt = rt.shadowRoot.activeElement
       } else if (rt.shadowRoot.querySelector('input, textarea, select')) {
@@ -256,85 +181,71 @@ try {
     Front.showEditor(element)
   }
 
+  const deleteLeftWord = () => {
+    const element = getRealEdit()
+
+    if (element.setSelectionRange !== undefined) {
+      const pos = deleteNextWord(element.value, -1, element.selectionStart)
+      element.value = pos[0]
+      element.setSelectionRange(pos[1], pos[1])
+      return
+    }
+
+    // for contenteditable div
+    const selection = document.getSelection()
+    const p0 = selection.focusOffset
+    document.getSelection().modify('move', 'backward', 'word')
+    const v = selection.focusNode.data
+    const p1 = selection.focusOffset
+    selection.focusNode.data = v.substr(0, p1) + v.substr(p0)
+    selection.setPosition(selection.focusNode, p1)
+  }
+
+  const deleteLeftChar = () =>
+    document.getSelection()
+      ?.modify('extend', 'backward', 'character')
+      ?? alert('No selection found')
+
   imap('<Ctrl-[>', '<Esc>')
   imap('<Ctrl-l>', '<Esc>')
   imap('<Ctrl-a>', '<Home>')
   imap('<Ctrl-e>', '<End>')
-  imapkey(
-    '<Ctrl-b>',
-    'Move cursor left',
-    safeRun(() => {
-      const activeElement = document.activeElement
-      if (activeElement.selectionStart < activeElement.value.length) {
-        activeElement.selectionStart += 1
-        activeElement.selectionEnd = activeElement.selectionStart
-      }
-    })
+  imapkey('<Ctrl-b>', () => {
+    const activeElement = document.activeElement
+    if (activeElement.selectionStart < activeElement.value.length) {
+      activeElement.selectionStart += 1
+      activeElement.selectionEnd = activeElement.selectionStart
+    }
+  })
+  imapkey('<Ctrl-f>', () =>
+    moveCursor('right', 'character')
   )
-  imapkey(
-    '<Ctrl-f>',
-    'Move cursor right',
-    safeRun(() => moveCursor('right', 'character'))
-  )
-  imapkey(
-    '<Ctrl-p>',
-    'Move cursor up',
-    safeRun(() => {
-      console.log('poi:', getRealEdit)
-    })
-  )
-  imapkey(
-    '<Ctrl-n>',
-    'Move cursor down',
-    safeRun(() =>
-      document.activeElement.dispatchEvent(
-        new KeyboardEvent('keydown', {
-          key: 'ArrowUp',
-          code: 'ArrowUp',
-        })
-      )
+  imapkey('<Ctrl-p>', () => console.log('poi:', getRealEdit))
+  imapkey('<Ctrl-n>', () =>
+    document.activeElement.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowUp',
+        code: 'ArrowUp',
+      })
     )
   )
-  imapkey('<Ctrl-g>', 'Edit in the editor', safeRun(editInEditor))
+  imapkey('<Ctrl-g>', editInEditor)
+  imap('<Ctrl-h>', '<Backspace>') // TODO: Didn't work
+
   iunmap('<Ctrl-i>')
   iunmap(':') // Emoji completion
-  imapkey('<Ctrl-w>', 'Delete a left word', safeRun(deleteLeftWord)) // TODO: Didn't work
-  imap('<Ctrl-h>', '<Backspace>') // TODO: Didn't work
+  imapkey('<Ctrl-w>', 'Delete a left word', deleteLeftWord) // TODO: Didn't work
 } catch (e) {
   alert(`In the section 'Insert mode': ${e}`)
-}
-
-function deleteLeftWord() {
-  const element = getRealEdit()
-
-  if (element.setSelectionRange !== undefined) {
-    const pos = deleteNextWord(element.value, -1, element.selectionStart)
-    element.value = pos[0]
-    element.setSelectionRange(pos[1], pos[1])
-    return
-  }
-
-  // for contenteditable div
-  const selection = document.getSelection()
-  const p0 = selection.focusOffset
-  document.getSelection().modify('move', 'backward', 'word')
-  const v = selection.focusNode.data
-  const p1 = selection.focusOffset
-  selection.focusNode.data = v.substr(0, p1) + v.substr(p0)
-  selection.setPosition(selection.focusNode, p1)
-}
-
-function deleteLeftChar() {
-  document.getSelection().modify('extend', 'backward', 'character')
 }
 
 /**
  * Visual mode
  */
 try {
-  // TODO: Enable this when api to be providing this.
-  // vmap("<Ctrl-[>", "<Esc>");
-  // vmap("<Ctrl-l>", "<Esc>");
+  // TODO: Enable this
+  // vmap('<Ctrl-[>', '<Esc>')
+  // vmap('<Ctrl-l>', '<Esc>')
 } catch (e) {
   alert(`In the section 'Visual mode': ${e}`)
 }
@@ -342,7 +253,6 @@ try {
 /**
  * Command mode
  */
-
 try {
   cmap('<Ctrl-[>', '<Esc>')
   cmap('<Ctrl-l>', '<Esc>')
@@ -362,19 +272,21 @@ try {
 }
 
 /**
- * The vim editor
+ * Vim editor
  */
+try {
+  aceVimMap('<Ctrl-j><Ctrl-k>', ':w<CR>', 'normal')
 
-aceVimMap('<Ctrl-j><Ctrl-k>', ':w<CR>', 'normal')
-
-aceVimMap('<Ctrl-[>', '<Esc>', 'insert')
-aceVimMap('<Ctrl-j><Ctrl-k>', '<Esc>:w<CR>', 'insert')
-aceVimMap('<Ctrl-l>', '<Esc>', 'insert')
+  aceVimMap('<Ctrl-[>', '<Esc>', 'insert')
+  aceVimMap('<Ctrl-j><Ctrl-k>', '<Esc>:w<CR>', 'insert')
+  aceVimMap('<Ctrl-l>', '<Esc>', 'insert')
+} catch (e) {
+  alert(`In the section 'Vim editor': ${e}`)
+}
 
 /**
  * Styles
  */
-
 settings.theme = `
   .sk_theme {
     font-family: Input Sans Condensed, Charcoal, sans-serif;
