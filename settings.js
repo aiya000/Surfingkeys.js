@@ -7,13 +7,13 @@
 
 const {
   aceVimMap,
-  mapkey,
+  mapkey: mapKey_,
   imap,
   iunmap,
-  imapkey,
+  imapkey: imapKey_,
   getClickableElements,
   vmap,
-  vmapkey,
+  vmapkey: vmapKey_,
   map,
   unmap,
   cmap,
@@ -30,21 +30,27 @@ const {
 } = api
 
 /**
+ * Expose API for using in the browser console
+ * @type {typeof api}
+ */
+window.surfingkeys = api
+
+/**
  * @param f {() => void}
  * @param [handle] {(e: unknown) => void}
  * @returns {() => void}
  */
-const safeRun = (f, handle) => {
-  return () => {
-    /** @param e {unknown} */
-    const defaultHandle = (e) => alert(`Error: ${e}`)
-    try {
-      return f()
-    } catch (e) {
-      return (handle ?? defaultHandle)(e)
-    }
+const safeRun = (f, handle) => () => {
+  /** @param e {unknown} */
+  const defaultHandle = (e) => alert(`Error: ${e}`)
+  try {
+    return f()
+  } catch (e) {
+    return (handle ?? defaultHandle)(e)
   }
 }
+
+const mapKey = () => 
 
 /**
  * @param message {string}

@@ -1,5 +1,5 @@
 {
-  // For editing SurfingKeys.js
+  // For editing settings.js
   "compilerOptions": {
     "lib": ["dom", "ES2023"],
     "allowJs": true,
