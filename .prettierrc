@@ -1,5 +1,5 @@
 {
-  "// prettierrc for SurfingKeys.js": "",
+  "// prettierrc for settings.js": "",
   "semi": false,
   "singleQuote": true,
   "trailingComma": "es5"
