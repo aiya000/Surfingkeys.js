@@ -1,4 +1,5 @@
 // @ts-check
+/* eslint no-implicit-any: 0 */
 
 /**
  * Reference:
@@ -15,7 +16,7 @@ const {
   vmap,
   vmapkey: vmapkey_,
   map: nmap,
-  unmap,
+  unmap: nunmap,
   cmap,
   addSearchAlias,
   removeSearchAlias,
@@ -24,6 +25,7 @@ const {
   Clipboard,
   Hints,
   Visual,
+  Normal,
   RUNTIME,
   Front,
   Insert,
@@ -33,6 +35,8 @@ const {
  * Expose API for using in the browser console
  */
 window.surfingkeys = api
+
+console.log('poi:', 'Reloaded:', new Date().toLocaleString())
 
 /**
  * @template T
@@ -91,12 +95,8 @@ try {
  * Normal mode
  */
 try {
-  nmapkey('<Ctrl-1>', () =>
-    RUNTIME('focusTabByIndex', { index: 1 }, alert)
-  )
-  nmapkey('<Ctrl-2>', () =>
-    RUNTIME('focusTabByIndex', { index: 2 }, alert)
-  )
+  nmapkey('<Ctrl-1>', () => RUNTIME('focusTabByIndex', { index: 1 }, alert))
+  nmapkey('<Ctrl-2>', () => RUNTIME('focusTabByIndex', { index: 2 }, alert))
   nmapkey('<Ctrl-3>', () => RUNTIME('focusTabByIndex', { index: 3 }))
   nmapkey('<Ctrl-4>', () => RUNTIME('focusTabByIndex', { index: 4 }))
   nmapkey('<Ctrl-5>', () => RUNTIME('focusTabByIndex', { index: 5 }))
@@ -132,8 +132,15 @@ try {
   nmapkey('>', () => RUNTIME('moveTab', { step: 1 }))
   nmapkey('Q', () => tabOpenLink('/pages/options.html')) // Open SurfingKeys setting page
   nmapkey('R', () => RUNTIME('reloadTab', { nocache: true }))
+  nmapkey('p', () =>
+    Clipboard.read((response) => {
+      location.href = response.data
+    })
+  )
   nmapkey('<Ctrl-p>', () => RUNTIME('previousTab'))
   nmapkey('<Ctrl-n>', () => RUNTIME('nextTab'))
+  nmapkey('<Ctrl-f>', () => Normal.scroll('pageDown'), { repeatIgnore: true })
+  nmapkey('<Ctrl-b>', () => Normal.scroll('pageUp'), { repeatIgnore: true })
 } catch (e) {
   alert(`In the section 'Normal mode': ${e}`)
 }
@@ -143,36 +150,106 @@ try {
  */
 try {
   /**
-   * Copied from `./Surfingkeys/src/content_scripts/common/insert.js`.
+   * NOTE: on some pages like `chrome://history/`, input is in shadowRoot of several other recursive shadowRoots.
+   * @param element {Element}
+   */
+  const getRealTarget = (element) => {
+    // If no shadowRoot exists
+    if (element.shadowRoot === null) {
+      return element
+    }
+
+    // If shadowRoot is active
+    if (element.shadowRoot.activeElement !== null) {
+      return getRealTarget(element.shadowRoot.activeElement)
+    }
+
+    // If an editable element exists in shadowRoot
+    const anotherEditable = element.shadowRoot.querySelector('input, textarea, select')
+    if (anotherEditable !== null) {
+      return anotherEditable
+    }
+
+    throw new Error('No editable element found')
+  }
+
+  /**
+   * @param event {Event}
+   */
+  const getEventTargetElement = (event) => {
+    if (event.target instanceof Element) {
+      return event.target
+    }
+    throw new TypeError('event.target is not an Element')
+  }
+
+  /**
+   * @param realTarget {Element}
+   * @returns {asserts realTarget is HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement}
+   */
+  const assertRealTargetIsEditable = (realTarget) =>
+    realTarget instanceof HTMLInputElement ||
+    realTarget instanceof HTMLTextAreaElement ||
+    realTarget instanceof HTMLSelectElement ||
+    raiseError('realTarget is not an editable element')
+
+  /**
    * @param [event] {Event}
+   * @returns The editable real (actual) element
    */
   const getRealEdit = (event) => {
-    let rt = event ? event.target : document.activeElement
-    // on some pages like chrome://history/, input is in shadowRoot of several other recursive shadowRoots.
-    while (rt?.shadowRoot) {
-      if (rt.shadowRoot.activeElement) {
-        rt = rt.shadowRoot.activeElement
-      } else if (rt.shadowRoot.querySelector('input, textarea, select')) {
-        rt = rt.shadowRoot.querySelector('input, textarea, select')
-        break
-      } else {
-        break
-      }
+    const source = event
+      ? getEventTargetElement(event)
+      : document.activeElement ?? raiseError('No active element found')
+    const realTarget = getRealTarget(source)
+
+    // If realTarget is an exact editable element
+    if (!(realTarget instanceof Window)) {
+      assertRealTargetIsEditable(realTarget) // anotherEditable may not be an editable element, but should be
+      return realTarget
     }
-    if (rt === window) {
-      rt = document.body
+
+    // Try recovering something beacause no editable element found
+    const anotherEditable = document.body
+    assertRealTargetIsEditable(anotherEditable) // anotherEditable may not be an editable element, but should be
+    return anotherEditable
+  }
+
+  /**
+   * @param activeElement {Element}
+   * @param direction {string}
+   * @param granularity {string}
+   */
+  const moveCursorAtActiveElement = (
+    activeElement,
+    direction,
+    granularity,
+  ) => {
+    // TODO: Get vector from direction and granularity
+    if (activeElement.selectionStart > 0) {
+      activeElement.selectionStart -= 1
+      activeElement.selectionEnd = activeElement.selectionStart
     }
-    return rt
   }
 
   /**
    * @param direction {string}
    * @param granularity {string}
-   * @returns {void}
    */
-  const moveCursor = (direction, granularity) =>
-    document.getSelection()?.modify('move', direction, granularity) ??
-    raiseError('No selection found')
+  const moveCursor = (direction, granularity) => {
+    const activeElement = getRealEdit()
+    if (activeElement === null) {
+      document.getSelection()
+        ?.modify('move', direction, granularity)
+        ?? raiseError('No selection found')
+    } else {
+      moveCursorAtActiveElement(
+        activeElement,
+        direction,
+        granularity,
+      )
+    }
+  }
 
   const editInEditor = () => {
     const element = getRealEdit()
@@ -191,7 +268,7 @@ try {
       return
     }
 
-    // for contenteditable div
+    // for content editable div
     const selection = document.getSelection()
     const p0 = selection.focusOffset
     document.getSelection().modify('move', 'backward', 'word')
@@ -204,33 +281,98 @@ try {
   const deleteLeftChar = () =>
     document.getSelection()
       ?.modify('extend', 'backward', 'character')
-      ?? alert('No selection found')
+      ?? raiseError('No selection found')
 
   imap('<Ctrl-[>', '<Esc>')
   imap('<Ctrl-l>', '<Esc>')
   imap('<Ctrl-a>', '<Home>')
   imap('<Ctrl-e>', '<End>')
-  imapkey('<Ctrl-b>', () => {
-    const activeElement = document.activeElement
-    if (activeElement.selectionStart < activeElement.value.length) {
-      activeElement.selectionStart += 1
-      activeElement.selectionEnd = activeElement.selectionStart
+  imapkey('<Ctrl-b>', () => moveCursor('left', 'character'))
+  imapkey('<Ctrl-f>', () => {
+    const activeElement = getRealEdit()
+    if (
+      activeElement instanceof HTMLInputElement ||
+      activeElement instanceof HTMLTextAreaElement
+    ) {
+      if (activeElement.selectionStart < activeElement.value.length) {
+        activeElement.selectionStart += 1
+        activeElement.selectionEnd = activeElement.selectionStart
+      }
+    } else {
+      try {
+        document.getSelection()?.modify('move', 'right', 'character')
+      } catch (e) {
+        console.error('Error moving cursor right:', e)
+      }
     }
   })
-  imapkey('<Ctrl-f>', () =>
-    moveCursor('right', 'character')
-  )
-  imapkey('<Ctrl-p>', () => console.log('poi:', getRealEdit))
-  imapkey('<Ctrl-n>', () =>
-    document.activeElement.dispatchEvent(
-      new KeyboardEvent('keydown', {
-        key: 'ArrowUp',
-        code: 'ArrowUp',
-      })
-    )
-  )
+  imapkey('<Ctrl-p>', () => {
+    const activeElement = getRealEdit()
+    try {
+      activeElement.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'ArrowUp',
+          code: 'ArrowUp',
+        })
+      )
+    } catch (e) {
+      console.error('Error dispatching ArrowUp:', e)
+    }
+  })
+  imapkey('<Ctrl-n>', () => {
+    const activeElement = getRealEdit()
+    try {
+      activeElement.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'ArrowDown',
+          code: 'ArrowDown',
+        })
+      )
+    } catch (e) {
+      console.error('Error dispatching ArrowDown:', e)
+    }
+  })
   imapkey('<Ctrl-g>', editInEditor)
   imap('<Ctrl-h>', '<Backspace>') // TODO: Didn't work
+
+  // 行末までを削除する
+  imapkey(
+    '<Ctrl-k>',
+    () => {
+      const element = getRealEdit()
+      if (
+        element instanceof HTMLInputElement ||
+        element instanceof HTMLTextAreaElement
+      ) {
+        // input や textarea 要素の場合
+        const start = element.selectionStart || 0
+        const end = element.value.indexOf('\n', start)
+        const lineEnd = end === -1 ? element.value.length : end
+
+        // 現在位置から行末までを選択して削除
+        const newValue =
+          element.value.substring(0, start) + element.value.substring(lineEnd)
+        element.value = newValue
+        element.selectionStart = start
+        element.selectionEnd = start
+      } else {
+        // contenteditable などの場合
+        try {
+          const selection = document.getSelection()
+          if (selection) {
+            // 現在位置から行末まで選択
+            selection.modify('extend', 'forward', 'lineboundary')
+            // 選択範囲を削除
+            document.execCommand('delete')
+          }
+        } catch (e) {
+          console.error('Error deleting to end of line:', e)
+        }
+      }
+    },
+    {},
+    'Delete to end of line'
+  )
 
   iunmap('<Ctrl-i>')
   iunmap(':') // Emoji completion
