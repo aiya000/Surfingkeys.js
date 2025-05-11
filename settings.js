@@ -284,6 +284,35 @@ try {
     }
   }
 
+  const moveDown = (element) => {
+    // 現在のカーソル位置を取得
+    const start = element.selectionStart;
+    const text = element.value;
+
+    // 現在の行の終わりを見つける
+    const currentLineEnd = text.indexOf('\n', start);
+    if (currentLineEnd === -1) {
+      // もう次の行がない場合は末尾へ
+      element.selectionStart = element.selectionEnd = text.length;
+      return;
+    }
+
+    // 次の行の同じ列位置を計算
+    const currentLineStart = text.lastIndexOf('\n', start - 1) + 1;
+    const column = start - currentLineStart;
+
+    // 次の行の開始位置
+    const nextLineStart = currentLineEnd + 1;
+
+    // 次の行の終わり
+    const nextLineEnd = text.indexOf('\n', nextLineStart);
+    const nextLineLength = (nextLineEnd === -1 ? text.length : nextLineEnd) - nextLineStart;
+
+    // 次の行の同じ列位置か、行の長さによる制限位置に移動
+    const newPosition = nextLineStart + Math.min(column, nextLineLength);
+    element.selectionStart = element.selectionEnd = newPosition;
+  };
+
   /**
    * @see {@link moveCursor}
    * @param activeElement {EditableHTMLElement}
@@ -306,12 +335,31 @@ try {
         break
       }
       case 'line':
-        // TODO:
+        switch (movement.direction) {
+          case 'backward':
+            activeElement.setSelectionRange(
+              activeElement.selectionStart - 1,
+              activeElement.selectionEnd - 1
+            )
+            break
+          case 'forward':
+            activeElement.setSelectionRange(
+              activeElement.selectionStart + 1,
+              activeElement.selectionEnd + 1
+            )
+            break
+          default: {
+            /** @type {never} */
+            const satisfied = movement
+            throw new Error(`unreachable: ${satisfied}`)
+          }
+        }
         break
-      default:
+      default: {
         /** @type {never} */
         const satisfied = movement
         throw new Error(`unreachable: ${satisfied}`)
+      }
     }
   }
 
