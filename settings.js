@@ -36,7 +36,7 @@ const {
  */
 window.surfingkeys = api
 
-console.log('poi:', 'Reloaded:', new Date().toLocaleString())
+console.log('poi:', 'Surfingkeys reloaded at:', new Date().toLocaleString())
 
 /**
  * @template T
@@ -150,7 +150,46 @@ try {
  */
 try {
   /**
+   * @typedef {HTMLInputElement | HTMLTextAreaElement} EditableHTMLElement
+   */
+
+  /**
+   * @typedef {Object} CharacterMovement
+   * @property {'character'} granularity
+   * @property {'left' | 'right'} direction
+   */
+
+  /**
+   * @typedef {Object} LineMovement
+   * @property {'line'} granularity
+   * @property {'backward' | 'forward'} direction
+   */
+
+  /**
+   * @typedef {CharacterMovement | LineMovement} Movement
+   */
+
+  /**
+   * @param element {Element}
+   * @returns {element is EditableHTMLElement}
+   */
+  const isEditableElement = (element) =>
+    element instanceof HTMLInputElement ||
+    element instanceof HTMLTextAreaElement
+
+  /**
+   * @param element {Element}
+   * @returns {asserts element is EditableHTMLElement}
+   */
+  const assertElementIsEditable = (element) => {
+    if (!isEditableElement(element)) {
+      throw new Error('Not an editable element')
+    }
+  }
+
+  /**
    * NOTE: on some pages like `chrome://history/`, input is in shadowRoot of several other recursive shadowRoots.
+   * @see {@link getRealEdit}
    * @param element {Element}
    */
   const getRealTarget = (element) => {
@@ -174,6 +213,7 @@ try {
   }
 
   /**
+   * @see {@link getRealEdit}
    * @param event {Event}
    */
   const getEventTargetElement = (event) => {
@@ -182,16 +222,6 @@ try {
     }
     throw new TypeError('event.target is not an Element')
   }
-
-  /**
-   * @param realTarget {Element}
-   * @returns {asserts realTarget is HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement}
-   */
-  const assertRealTargetIsEditable = (realTarget) =>
-    realTarget instanceof HTMLInputElement ||
-    realTarget instanceof HTMLTextAreaElement ||
-    realTarget instanceof HTMLSelectElement ||
-    raiseError('realTarget is not an editable element')
 
   /**
    * @param [event] {Event}
@@ -205,49 +235,98 @@ try {
 
     // If realTarget is an exact editable element
     if (!(realTarget instanceof Window)) {
-      assertRealTargetIsEditable(realTarget) // anotherEditable may not be an editable element, but should be
+      assertElementIsEditable(realTarget) // anotherEditable may not be an editable element, but should be
       return realTarget
     }
 
     // Try recovering something beacause no editable element found
     const anotherEditable = document.body
-    assertRealTargetIsEditable(anotherEditable) // anotherEditable may not be an editable element, but should be
+    assertElementIsEditable(anotherEditable) // anotherEditable may not be an editable element, but should be
     return anotherEditable
   }
 
   /**
-   * @param activeElement {Element}
-   * @param direction {string}
-   * @param granularity {string}
+   * @typedef {Object} CursorPosition
+   * @property {number} selectionStart
+   * @property {number} selectionEnd
    */
-  const moveCursorAtActiveElement = (
+
+  /**
+   * @param element {EditableHTMLElement}
+   * @returns {element is CursorPosition}
+    */
+  const isCursorPosition = (element) =>
+    element.selectionStart !== null &&
+    element.selectionEnd !== null
+
+  /**
+   * @see {@link moveCursorAtActiveElement}
+   * @param activeElement {EditableHTMLElement & CursorPosition} -- EditableHTMLElement but .selectionStart and selectionEnd are not nullable
+   * @param direction {'left' | 'right'}
+   */
+  const moveLeftOrRightAtActiveElement = (
     activeElement,
-    direction,
-    granularity,
+    direction
   ) => {
-    // TODO: Get vector from direction and granularity
-    if (activeElement.selectionStart > 0) {
-      activeElement.selectionStart -= 1
+    try {
+      if (direction === 'right') {
+        activeElement.selectionStart += 1
+        return
+      }
+
+      if (activeElement.selectionStart > 0) {
+        activeElement.selectionStart -= 1
+      }
+
+      throw new Error('unreachable')
+    } finally {
       activeElement.selectionEnd = activeElement.selectionStart
     }
   }
 
   /**
-   * @param direction {string}
-   * @param granularity {string}
+   * @see {@link moveCursor}
+   * @param activeElement {EditableHTMLElement}
+   * @param movement {Movement}
    */
-  const moveCursor = (direction, granularity) => {
+  const moveCursorAtActiveElement = (
+    activeElement,
+    movement
+  ) => {
+    if (!isCursorPosition(activeElement)) {
+      throw new Error('No selection found')
+    }
+
+    switch (movement.granularity) {
+      case 'character': {
+        moveLeftOrRightAtActiveElement(
+          activeElement,
+          movement.direction,
+        )
+        break
+      }
+      case 'line':
+        // TODO:
+        break
+      default:
+        /** @type {never} */
+        const satisfied = movement
+        throw new Error(`unreachable: ${satisfied}`)
+    }
+  }
+
+  /**
+   * @param movement {Movement}
+   */
+  const moveCursor = (movement) => {
     const activeElement = getRealEdit()
     if (activeElement === null) {
+      const { direction, granularity } = movement
       document.getSelection()
         ?.modify('move', direction, granularity)
         ?? raiseError('No selection found')
     } else {
-      moveCursorAtActiveElement(
-        activeElement,
-        direction,
-        granularity,
-      )
+      moveCursorAtActiveElement(activeElement, movement)
     }
   }
 
@@ -288,37 +367,8 @@ try {
   imap('<Ctrl-a>', '<Home>')
   imap('<Ctrl-e>', '<End>')
   imapkey('<Ctrl-b>', () => moveCursor('left', 'character'))
-  imapkey('<Ctrl-f>', () => {
-    const activeElement = getRealEdit()
-    if (
-      activeElement instanceof HTMLInputElement ||
-      activeElement instanceof HTMLTextAreaElement
-    ) {
-      if (activeElement.selectionStart < activeElement.value.length) {
-        activeElement.selectionStart += 1
-        activeElement.selectionEnd = activeElement.selectionStart
-      }
-    } else {
-      try {
-        document.getSelection()?.modify('move', 'right', 'character')
-      } catch (e) {
-        console.error('Error moving cursor right:', e)
-      }
-    }
-  })
-  imapkey('<Ctrl-p>', () => {
-    const activeElement = getRealEdit()
-    try {
-      activeElement.dispatchEvent(
-        new KeyboardEvent('keydown', {
-          key: 'ArrowUp',
-          code: 'ArrowUp',
-        })
-      )
-    } catch (e) {
-      console.error('Error dispatching ArrowUp:', e)
-    }
-  })
+  imapkey('<Ctrl-f>', () => moveCursor('right', 'character'))
+  imapkey('<Ctrl-p>', () => moveCursor('up', 'line'))
   imapkey('<Ctrl-n>', () => {
     const activeElement = getRealEdit()
     try {
